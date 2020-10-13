@@ -16,6 +16,8 @@ public class PlayerController : MonoBehaviourPun
     public int maxHp;
     public bool dead;
 
+    public HeaderInfo headerInfo;
+
     [Header("Attack")]
     public int damage;
     public float attackRange;
@@ -38,6 +40,8 @@ public class PlayerController : MonoBehaviourPun
         photonPlayer = player;
 
         // initialize the health bar
+        headerInfo.Initialize(player.NickName, maxHp);
+
         if (player.IsLocal)
             me = this;
         else
@@ -93,6 +97,8 @@ public class PlayerController : MonoBehaviourPun
         if (hit.collider != null && hit.collider.gameObject.CompareTag("Enemy"))
         {
             // get the enemy and damage them
+            Enemy enemy = hit.collider.GetComponent<Enemy>();
+            enemy.photonView.RPC("TakeDamage", RpcTarget.MasterClient, damage);
         }
 
         // play attack animation
@@ -105,13 +111,17 @@ public class PlayerController : MonoBehaviourPun
         gold += goldToGive;
 
         // update the ui
+        GameUI.instance.UpdateGoldText(gold);
     }
 
     [PunRPC]
     public void TakeDamage(int damage)
     {
         curHp -= damage;
+
         // update the health bar
+        headerInfo.photonView.RPC("UpdateHealthBar", RpcTarget.All, curHp);
+
         if (curHp <= 0)
             Die();
         else
@@ -132,6 +142,7 @@ public class PlayerController : MonoBehaviourPun
         curHp = Mathf.Clamp(curHp + amountToHeal, 0, maxHp);
 
         // update the health bar
+        headerInfo.photonView.RPC("UpdateHealthBar", RpcTarget.All, curHp);
     }
 
     void Die()
@@ -156,5 +167,6 @@ public class PlayerController : MonoBehaviourPun
         rig.isKinematic = false;
 
         //update the health bar
+        headerInfo.photonView.RPC("UpdateHealthBar", RpcTarget.All, curHp);
     }
 }
